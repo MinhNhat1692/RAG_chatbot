@@ -30,34 +30,51 @@ def save_token(token):
         f.write(token)
 
 def login_to_chatwoot():
-    url = f"{CHATWOOT_BASE_URL}/api/v1/accounts/sign_in"
+    url = f"{CHATWOOT_BASE_URL}/auth/sign_in"
     response = requests.post(url, json={
         "email": CHATWOOT_EMAIL,
         "password": CHATWOOT_PASSWORD
     })
     response.raise_for_status()
-    token = response.json()["data"]["attributes"]["access_token"]
+    token = response.json()["data"]["access_token"]
     save_token(token)
     return token
 
 def validate_token(token):
     url = f"{CHATWOOT_BASE_URL}/api/v1/profile"
-    headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(url, headers=headers)
-    return response.status_code == 200
+    headers = {"api_access_token": token}
+    
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            profile_data = response.json()
+            return True, profile_data.get("account_id")
+        else:
+            return False, None
+    except Exception as e:
+        print(f"[validate_token] Error: {e}")
+        return False, None
 
-def send_message_to_chatwoot(conversation_id, message, token):
-    url = f"{CHATWOOT_BASE_URL}/api/v1/conversations/{conversation_id}/messages"
+def send_message_to_chatwoot(account_id, conversation_id, message, token):
+    url = f"{CHATWOOT_BASE_URL}/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages"
     headers = {
-        "Authorization": f"Bearer {token}",
+        "api_access_token": f"{token}",
         "Content-Type": "application/json"
     }
     payload = {
         "content": message,
         "message_type": "outgoing"
+        "private": false,
+        "content_type": "text"
     }
-    response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
+
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"[send_message_to_chatwoot] Error sending message: {e}")
+        return None
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -71,14 +88,19 @@ def ask():
     convo_id = str(data.get("conversation", {}).get("id", ""))
     chatwoot_convo_id = convo_id
 
-    # ✅ Optional: prevent action if conversation_id is missing (for message reply)
+    # ✅ Prevent action if conversation_id is missing
     if not chatwoot_convo_id:
         return jsonify({"error": "Missing conversation ID"}), 400
 
-    # Step 1: Get valid token
+    # ✅ Get valid token and account_id
     token = get_saved_token()
-    if not token or not validate_token(token):
+    is_valid, account_id = validate_token(token)
+
+    if not is_valid or not account_id:
         token = login_to_chatwoot()
+        is_valid, account_id = validate_token(token)
+        if not is_valid or not account_id:
+            return jsonify({"error": "Unable to authenticate with Chatwoot"}), 401
 
     # 1. Get full conversation
     convo_history = get_conversation_history(convo_id)
@@ -151,12 +173,11 @@ def ask():
     rag.store_and_link_query(convo_id, query, source='user')
     rag.store_and_link_query(convo_id, answer, source='bot')
 
-    # Step 3: Send answer to Chatwoot
-    if chatwoot_convo_id:
-        try:
-            send_message_to_chatwoot(chatwoot_convo_id, answer, token)
-        except Exception as e:
-            print(f"Failed to send message to Chatwoot: {e}")
+    # Step 7: Send answer to Chatwoot
+    try:
+        send_message_to_chatwoot(account_id, chatwoot_convo_id, answer, token)
+    except Exception as e:
+        print(f"[ask] Failed to send message to Chatwoot: {e}")
 
     return jsonify({'answer': answer})
 
