@@ -78,6 +78,10 @@ def send_message_to_chatwoot(account_id, conversation_id, message, token):
 
 @app.route('/ask', methods=['POST'])
 def ask():
+    # Get both JSON body and form data
+    json_data = request.get_json(silent=True)
+    print("JSON Data:", json_data)
+
     data = request.get_json()
 
     # ✅ Prevent empty payloads or missing content
