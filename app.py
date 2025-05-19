@@ -64,7 +64,7 @@ def send_message_to_chatwoot(account_id, conversation_id, message, token):
     payload = {
         "content": message,
         "message_type": "outgoing"
-        "private": false,
+        "private": False,
         "content_type": "text"
     }
 
