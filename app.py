@@ -78,15 +78,15 @@ def send_message_to_chatwoot(account_id, conversation_id, message, token):
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    # Get both JSON body and form data
-    json_data = request.get_json(silent=True)
-    print("JSON Data:", json_data)
-
     data = request.get_json()
 
     # ✅ Prevent empty payloads or missing content
     if not data or "content" not in data or not data.get("content", "").strip():
         return jsonify({"error": "Invalid or empty input"}), 400
+
+    # ✅ Ignore bot's own messages (outgoing messages)
+    if data.get("message_type") == "outgoing":
+        return jsonify({"message": "Ignored outgoing message"}), 200
 
     query = data["content"].strip()
     convo_id = str(data.get("conversation", {}).get("id", ""))
