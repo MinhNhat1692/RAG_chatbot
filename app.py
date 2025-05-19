@@ -1,5 +1,16 @@
 from flask import Flask, request, jsonify
 from rag import RAG, answer_question, get_conversation_history, detect_missing_info
+from dotenv import load_dotenv
+import os
+import requests
+import json
+
+load_dotenv()
+
+CHATWOOT_EMAIL = os.getenv("CHATWOOT_EMAIL")
+CHATWOOT_PASSWORD = os.getenv("CHATWOOT_PASSWORD")
+CHATWOOT_BASE_URL = os.getenv("CHATWOOT_BASE_URL")
+TOKEN_FILE = "chatwoot_token.txt"
 
 app = Flask(__name__)
 rag = RAG()
@@ -8,11 +19,66 @@ rag = RAG()
 # rag.add("có 4 cỡ là 60, 70 , 80, 90")
 # rag.add("sản phẩm có 2 màu là đen và đỏ")
 
+def get_saved_token():
+    if os.path.exists(TOKEN_FILE):
+        with open(TOKEN_FILE, 'r') as f:
+            return f.read().strip()
+    return None
+
+def save_token(token):
+    with open(TOKEN_FILE, 'w') as f:
+        f.write(token)
+
+def login_to_chatwoot():
+    url = f"{CHATWOOT_BASE_URL}/api/v1/accounts/sign_in"
+    response = requests.post(url, json={
+        "email": CHATWOOT_EMAIL,
+        "password": CHATWOOT_PASSWORD
+    })
+    response.raise_for_status()
+    token = response.json()["data"]["attributes"]["access_token"]
+    save_token(token)
+    return token
+
+def validate_token(token):
+    url = f"{CHATWOOT_BASE_URL}/api/v1/profile"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(url, headers=headers)
+    return response.status_code == 200
+
+def send_message_to_chatwoot(conversation_id, message, token):
+    url = f"{CHATWOOT_BASE_URL}/api/v1/conversations/{conversation_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "content": message,
+        "message_type": "outgoing"
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+
 @app.route('/ask', methods=['POST'])
 def ask():
-    data = request.json
-    query = data.get('query', '')
-    convo_id = data.get('conversation_id', '')
+    data = request.get_json()
+
+    # ✅ Prevent empty payloads or missing content
+    if not data or "content" not in data or not data.get("content", "").strip():
+        return jsonify({"error": "Invalid or empty input"}), 400
+
+    query = data["content"].strip()
+    convo_id = str(data.get("conversation", {}).get("id", ""))
+    chatwoot_convo_id = convo_id
+
+    # ✅ Optional: prevent action if conversation_id is missing (for message reply)
+    if not chatwoot_convo_id:
+        return jsonify({"error": "Missing conversation ID"}), 400
+
+    # Step 1: Get valid token
+    token = get_saved_token()
+    if not token or not validate_token(token):
+        token = login_to_chatwoot()
 
     # 1. Get full conversation
     convo_history = get_conversation_history(convo_id)
@@ -84,6 +150,13 @@ def ask():
     # Step 6: Store both user query and bot answer
     rag.store_and_link_query(convo_id, query, source='user')
     rag.store_and_link_query(convo_id, answer, source='bot')
+
+    # Step 3: Send answer to Chatwoot
+    if chatwoot_convo_id:
+        try:
+            send_message_to_chatwoot(chatwoot_convo_id, answer, token)
+        except Exception as e:
+            print(f"Failed to send message to Chatwoot: {e}")
 
     return jsonify({'answer': answer})
 
