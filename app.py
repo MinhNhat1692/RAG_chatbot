@@ -87,5 +87,25 @@ def ask():
 
     return jsonify({'answer': answer})
 
+@app.route('/params-check', methods=['POST'])
+def params_check():
+    # Get both JSON body and form data
+    json_data = request.get_json(silent=True)
+    form_data = request.form.to_dict()
+    args_data = request.args.to_dict()
+    headers = dict(request.headers)
+
+    print("JSON Data:", json_data)
+    print("Form Data:", form_data)
+    print("Query Params:", args_data)
+    print("Headers:", headers)
+
+    return jsonify({
+        'json': json_data,
+        'form': form_data,
+        'args': args_data,
+        'headers': headers
+    })
+
 if __name__ == '__main__':
     app.run(port=5000)
