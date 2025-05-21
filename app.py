@@ -160,6 +160,7 @@ def handle_chatwoot_message(query, convo_id):
                 "120=>5-6tuổi,20-23kg,120cm",
                 "130=>6-7tuổi,23-26kg,126cm",
                 "140=>8-9tuổi,27-30kg,134cm",
+                "khi xác định thì phải hỏi 2 cỡ cho khách hàng chọn ví dụ 90 100 chị chọn cỡ nào ạ"
             ],
             "màu sắc": [
                 "Sản phẩm có các màu: Trắng, Hồng, Xanh cốm.",
