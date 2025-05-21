@@ -55,13 +55,20 @@ def get_next_missing_field(info_status):
     order_fields = ["kích thước", "màu sắc", "số bộ"]
     global_fields = ["số điện thoại", "địa chỉ giao hàng"]
 
-    # Check each order in sequence
-    for i, order in enumerate(info_status.get("đơn hàng", [])):
+    # Ensure there's at least one order to validate
+    orders = info_status.get("đơn hàng", [])
+    if not orders:
+        orders = [{
+            "kích thước": None,
+            "màu sắc": None,
+            "số bộ": 1
+        }]
+
+    for i, order in enumerate(orders):
         for field in order_fields:
             if order.get(field) is None:
                 return f"đơn hàng {i + 1}: {field}"
 
-    # Check shared fields
     for field in global_fields:
         if info_status.get(field) is None:
             return field
@@ -139,8 +146,6 @@ def handle_chatwoot_message(query, convo_id):
             "trả lời ngắn gọn, lịch sự, xưng hô là em, khách hàng là chị",
             "bắt đầu câu trả lời bằng từ Dạ",
             "các câu khách hỏi giá như bao nhiêu, ib, inbox, xin giá ...",
-            "trong biến answer chỉ có câu trả lời hoặc câu hỏi xác nhận, câu hỏi tiếp theo cần đặt ở biến question_ask_next"
-            "Thông tin đơn hàng trong biến order_info thì để ở dạng text đẹp: Kích thước: xx /n Màu sắc: xx /n Số bộ: /n"
         ]
 
         extra_context_map = {
@@ -184,10 +189,10 @@ def handle_chatwoot_message(query, convo_id):
 
         if answer:
             rag.store_and_link_query(convo_id, query, source='user')
-            rag.store_and_link_query(convo_id, answer["answer"], source='bot')
+            rag.store_and_link_query(convo_id, answer["answer_only"], source='bot')
             rag.store_and_link_query(convo_id, answer["question_ask_next"], source='bot')
             send_message_to_chatwoot(account_id, convo_id, answer["order_info"], token)
-            send_message_to_chatwoot(account_id, convo_id, answer["answer"], token)
+            send_message_to_chatwoot(account_id, convo_id, answer["answer_only"], token)
             send_message_to_chatwoot(account_id, convo_id, answer["question_ask_next"], token)
 
         del rag  # Optional memory cleanup
