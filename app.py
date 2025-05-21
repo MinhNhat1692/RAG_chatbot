@@ -131,7 +131,7 @@ def handle_chatwoot_message(query, convo_id):
         info_status = detect_missing_info(convo_history + [query])
         print("Missing info status:", info_status)
 
-        next_missing = next((k for k, v in info_status.items() if v is None), None)
+        next_missing = get_next_missing_field(info_status)
         print("Next missing field:", next_missing)
 
         must_know_context = [
