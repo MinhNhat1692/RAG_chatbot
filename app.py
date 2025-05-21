@@ -182,8 +182,10 @@ def handle_chatwoot_message(query, convo_id):
         rag_contexts = rag.search(query, convo_history)
         context_texts = [text for text, _ in rag_contexts]
 
-        # Normalize next_missing by removing prefix "đơn hàng X: "
-        normalized_missing = re.sub(r"^đơn hàng \d+:\s*", "", next_missing).strip()
+        if next_missing is None:
+            normalized_missing = ""
+        else:
+            normalized_missing = re.sub(r"^đơn hàng \d+:\s*", "", next_missing).strip()
 
         # Combine contexts
         combined_contexts = must_know_context[:]
