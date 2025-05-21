@@ -5,6 +5,7 @@ import os
 import requests
 import json
 import threading
+import re
 
 load_dotenv()
 
@@ -177,12 +178,17 @@ def handle_chatwoot_message(query, convo_id):
         rag_contexts = rag.search(query, convo_history)
         context_texts = [text for text, _ in rag_contexts]
 
+        # Normalize next_missing by removing prefix "đơn hàng X: "
+        normalized_missing = re.sub(r"^đơn hàng \d+:\s*", "", next_missing).strip()
+
+        # Combine contexts
         combined_contexts = must_know_context[:]
-        if next_missing in extra_context_map:
-            combined_contexts.extend(extra_context_map[next_missing])
+        if normalized_missing in extra_context_map:
+            combined_contexts.extend(extra_context_map[normalized_missing])
         combined_contexts.extend(context_texts)
 
-        if next_missing == "số điện thoại" and info_status.get("địa chỉ giao hàng") is None:
+        # Logic to override next_missing if needed
+        if normalized_missing == "số điện thoại" and info_status.get("địa chỉ giao hàng") is None:
             next_missing = "số điện thoại & địa chỉ giao hàng"
 
         answer = answer_question(query, combined_contexts, next_missing, info_status)
