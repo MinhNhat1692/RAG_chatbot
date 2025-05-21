@@ -151,7 +151,8 @@ def handle_chatwoot_message(query, convo_id):
 
         extra_context_map = {
             "kích thước": [
-                "có các cỡ 60, 70, 80, 90, 100, 110, 120, 130, 140",
+                "hỏi kích thước thì hỏi chiều cao, cân nặng, độ tuổi của bé",
+                "có các cỡ 80, 90, 100, 110, 120, 130, 140",
                 "80=>1-2tuổi,9-11kg,90cm",
                 "90=>2-3tuổi,11-14kg,95cm",
                 "100=>3-4tuổi,14-16kg,104cm",
