@@ -183,10 +183,10 @@ def handle_chatwoot_message(query, convo_id):
         if answer:
             rag.store_and_link_query(convo_id, query, source='user')
             rag.store_and_link_query(convo_id, answer["answer"], source='bot')
-            rag.store_and_link_query(convo_id, answer["question"], source='bot')
+            rag.store_and_link_query(convo_id, answer["question_ask_next"], source='bot')
             send_message_to_chatwoot(account_id, convo_id, answer["order_info"], token)
             send_message_to_chatwoot(account_id, convo_id, answer["answer"], token)
-            send_message_to_chatwoot(account_id, convo_id, answer["question"], token)
+            send_message_to_chatwoot(account_id, convo_id, answer["question_ask_next"], token)
 
         del rag  # Optional memory cleanup
     except Exception as e:
