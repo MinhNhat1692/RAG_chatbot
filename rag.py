@@ -319,25 +319,22 @@ def answer_question(question, contexts, next_missing=None, info_status=None):
             )
             print("✅ [DEBUG] Trường hợp intent 1 - cung cấp thêm thông tin")
             return {
-                "order_info": order_info,
-                "answer": answer,
-                "question": "Chị có cần em hỗ trợ gì thêm không ạ?"
+                "answer_only": answer,
+                "question_ask_next": "Chị có cần em hỗ trợ gì thêm không ạ?"
             }
 
         elif intent == "2":
             print("✅ [DEBUG] Trường hợp intent 2 - xác nhận đặt hàng")
             return {
-                "order_info": order_info,
-                "answer": "Dạ em cảm ơn chị nhiều ạ 💖 Em sẽ tiến hành lên đơn ngay cho mình nhé!",
-                "question": "Chị có cần đổi gì thêm không ạ, ví dụ số bộ hay màu sắc?"
+                "answer_only": "Dạ em cảm ơn chị nhiều ạ 💖 Em sẽ tiến hành lên đơn ngay cho mình nhé!",
+                "question_ask_next": "Chị có cần đổi gì thêm không ạ, ví dụ số bộ hay màu sắc?"
             }
 
         else:
             print("❓ [DEBUG] Trường hợp intent 3 - chưa rõ ý định")
             return {
-                "order_info": order_info,
-                "answer": "Chị chờ em chút ạ 🫶",
-                "question": "Không biết chị muốn cung cấp thêm thông tin hay xác nhận đặt hàng ạ?"
+                "answer_only": "Chị chờ em chút ạ 🫶",
+                "question_ask_next": "Không biết chị muốn cung cấp thêm thông tin hay xác nhận đặt hàng ạ?"
             }
 
     # 🧠 Trường hợp thiếu thông tin → tiếp tục hỏi
