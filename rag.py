@@ -328,7 +328,7 @@ Chỉ trả lời bằng 1, 2 hoặc 3.
 Bạn là một trợ lý bán hàng chuyên nghiệp. Hãy thực hiện 3 việc:
 1. Trả lời khách một cách thân thiện.
 2. Nếu thiếu thông tin, hãy hỏi tiếp khách về thông tin còn thiếu.
-3. Trả về kết quả dưới dạng JSON với 2 trường: answer_only (chỉ có câu trả lời hoặc câu hỏi xác nhận), question_ask_next (câu hỏi tiếp theo cần hỏi để biết thông tin cần biết tiếp theo).
+3. Trả về kết quả dưới dạng JSON với 2 trường: answer_only, question_ask_next
 
 Trả lời dựa trên thông tin đơn hàng ở dạng JSON dưới đây và câu hỏi của khách hàng.
 
