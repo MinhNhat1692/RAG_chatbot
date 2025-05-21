@@ -138,7 +138,9 @@ def handle_chatwoot_message(query, convo_id):
             "Giá mỗi bộ là 175,000 VNĐ. Mua từ 2 set giá còn 170k",
             "trả lời ngắn gọn, lịch sự, xưng hô là em, khách hàng là chị",
             "bắt đầu câu trả lời bằng từ Dạ",
-            "các câu khách hỏi giá như bao nhiêu, ib, inbox, xin giá ..."
+            "các câu khách hỏi giá như bao nhiêu, ib, inbox, xin giá ...",
+            "trong biến answer chỉ có câu trả lời hoặc câu hỏi xác nhận, câu hỏi tiếp theo cần đặt ở biến question_ask_next"
+            "Thông tin đơn hàng trong biến order_info thì để ở dạng text đẹp: Kích thước: xx /n Màu sắc: xx /n Số bộ: /n"
         ]
 
         extra_context_map = {
