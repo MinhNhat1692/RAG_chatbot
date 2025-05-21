@@ -51,6 +51,23 @@ def validate_token(token):
         print(f"[validate_token] Error: {e}")
         return False, None
 
+def get_next_missing_field(info_status):
+    order_fields = ["kích thước", "màu sắc", "số bộ"]
+    global_fields = ["số điện thoại", "địa chỉ giao hàng"]
+
+    # Check each order in sequence
+    for i, order in enumerate(info_status.get("đơn hàng", [])):
+        for field in order_fields:
+            if order.get(field) is None:
+                return f"đơn hàng {i + 1}: {field}"
+
+    # Check shared fields
+    for field in global_fields:
+        if info_status.get(field) is None:
+            return field
+
+    return None  # All info present
+
 def send_message_to_chatwoot(account_id, conversation_id, message, token):
     url = f"{CHATWOOT_BASE_URL}/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages"
     headers = {
@@ -163,10 +180,14 @@ def handle_chatwoot_message(query, convo_id):
 
         answer = answer_question(query, combined_contexts, next_missing, info_status)
 
-        rag.store_and_link_query(convo_id, query, source='user')
-        rag.store_and_link_query(convo_id, answer, source='bot')
+        if answer:
+            rag.store_and_link_query(convo_id, query, source='user')
+            rag.store_and_link_query(convo_id, answer["answer"], source='bot')
+            rag.store_and_link_query(convo_id, answer["question"], source='bot')
+            send_message_to_chatwoot(account_id, convo_id, answer["order_info"], token)
+            send_message_to_chatwoot(account_id, convo_id, answer["answer"], token)
+            send_message_to_chatwoot(account_id, convo_id, answer["question"], token)
 
-        send_message_to_chatwoot(account_id, convo_id, answer, token)
         del rag  # Optional memory cleanup
     except Exception as e:
         print(f"[handle_chatwoot_message] Error: {e}")

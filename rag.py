@@ -95,20 +95,29 @@ def detect_missing_info(convo_texts):
     prompt = f"""
 Bạn là một trợ lý bán hàng. Dưới đây là lịch sử cuộc trò chuyện với khách hàng.
 
-Mục tiêu là lấy đủ thông tin sau, theo thứ tự:
-1. Kích thước
-2. Màu sắc
-3. Số bộ (số lượng, số cái, thường nếu khách chọn 1 màu thì 1 cái, 2 màu là 2 cái ..)
-4. Số điện thoại
-5. Địa chỉ giao hàng
+Khách hàng có thể đặt **nhiều đơn hàng**, mỗi đơn gồm:
+- Kích thước
+- Màu sắc
+- Số bộ
 
-Hãy phân tích đoạn hội thoại và trích xuất thông tin nếu có. Nếu chưa có, để giá trị là null.
+Ngoài ra cần thu thập:
+- Số điện thoại
+- Địa chỉ giao hàng
 
-Trả về kết quả dưới dạng JSON:
+Hãy phân tích đoạn hội thoại và trích xuất các thông tin trên.
+Nếu thiếu thông tin nào, để giá trị là null.
+
+Trả về kết quả dưới dạng JSON như sau:
+
 {{
-  "kích thước": "60" | "70" | "80" | ... | null,
-  "màu sắc": "trắng" | "đen" | ... | null,
-  "số bộ": 2 | 3 | ... | null,
+  "đơn hàng": [
+    {{
+      "kích thước": "60" | "70" | "80" | null,
+      "màu sắc": "trắng" | "đen" | null,
+      "số bộ": 1 | 2 | 3 | null
+    }},
+    ...
+  ],
   "số điện thoại": "0123456789" | null,
   "địa chỉ giao hàng": "địa chỉ đầy đủ" | null
 }}
@@ -129,21 +138,8 @@ Lịch sử hội thoại:
     try:
         return json.loads(result)
     except json.JSONDecodeError:
-        print("⚠️ Lỗi parse JSON lần đầu:", result)
-
-        # Try to fix with a follow-up message
-        fix_prompt = f"""
-Kết quả sau không phải là JSON hợp lệ. Hãy sửa lại cú pháp JSON và trả về JSON đúng chuẩn: {result} """
-        messages.append({"role": "assistant", "content": result})
-        messages.append({"role": "user", "content": fix_prompt})
-
-        fixed_result = call_gpt(messages)
-
-        try:
-            return json.loads(fixed_result)
-        except json.JSONDecodeError:
-            print("❌ Lỗi parse JSON lần thứ hai:", fixed_result)
-            return {}
+        print("❌ Lỗi parse JSON:", result)
+        return {}
 
 
 # ------------------- RAG Class -------------------
@@ -249,18 +245,6 @@ class RAG:
 def answer_question(question, contexts, next_missing=None, info_status=None):
     context_block = "\n".join(contexts)
 
-    # Build known info summary
-    known_info = []
-    info_dict = {}
-    if info_status:
-        for key, value in info_status.items():
-            if value:  # giá trị khác rỗng
-                known_info.append(key)
-                info_dict[key] = value  # ✅ lấy giá trị trực tiếp từ info_status
-
-    known_info_str = ", ".join(known_info) if known_info else "Chưa có thông tin nào"
-
-    # ✅ Nếu đã đầy đủ thông tin → xác định intent trước
     if next_missing is None:
         # Gửi prompt để phân loại intent
         intent_prompt = f"""
@@ -281,58 +265,100 @@ Chỉ trả lời bằng 1, 2 hoặc 3.
         )
         intent = intent_response.choices[0].message.content.strip()
 
-        if intent == "1":
-            # Trường hợp khách đang cung cấp thêm thông tin → trả lại như cũ
-            so_bo = info_dict.get("số bộ", 1)
+        don_hang_list = info_status.get('đơn hàng', [])
+
+        def get_first_valid_value(key):
+            for dh in don_hang_list:
+                val = dh.get(key)
+                if val not in (None, "", "chưa rõ"):
+                    return val
+            return "chưa rõ"
+
+        # Tổng số bộ = tổng cộng 'số bộ' trong các đơn hàng, bỏ qua None hoặc giá trị không hợp lệ
+        total_so_bo = 0
+        for dh in don_hang_list:
             try:
-                so_bo = int(so_bo)
-            except ValueError:
-                so_bo = 1
+                so_bo = int(dh.get("số bộ", 0) or 0)
+                total_so_bo += so_bo
+            except (ValueError, TypeError):
+                continue
+        if total_so_bo == 0:
+            total_so_bo = 1  # mặc định 1 nếu không có số bộ hợp lệ
 
-            if so_bo > 1:
-                tong_tien = so_bo * 170000
-            else:
-                tong_tien = so_bo * 175000
+        order_info = {
+            "kích thước": get_first_valid_value("kích thước"),
+            "màu sắc": get_first_valid_value("màu sắc"),
+            "số bộ": total_so_bo,
+            "số điện thoại": info_status.get("số điện thoại") or "chưa rõ",
+            "địa chỉ giao hàng": info_status.get("địa chỉ giao hàng") or "chưa rõ",
+        }
 
-            thong_tin_don_hang = "\n".join([
-                f"- {key.capitalize()}: {info_dict.get(key, '...')}"
-                for key in ["kích thước", "màu sắc", "số bộ", "số điện thoại", "địa chỉ giao hàng"]
-            ])
+        # Tính tổng tiền theo số bộ
+        tong_tien = total_so_bo * (170000 if total_so_bo > 1 else 175000)
 
-            return (
-                f"Dạ em đã ghi nhận đầy đủ thông tin đơn hàng của mình ạ:\n"
-                f"{thong_tin_don_hang}\n"
-                f"👉 Tổng tiền: {tong_tien:,} VNĐ\n\n"
+        if intent == "1":
+            answer = (
+                f"Dạ em đã ghi nhận đầy đủ thông tin đơn hàng của mình ạ:\n" +
+                "\n".join([f"- {k.capitalize()}: {v}" for k, v in order_info.items()]) +
+                f"\n👉 Tổng tiền: {tong_tien:,} VNĐ\n\n"
                 f"Dạ em gửi khoảng 3-4 ngày chị nhận được, chị nhận thanh toán giúp em {tong_tien:,} VNĐ và phí ship ạ"
             )
+            return {
+                "order_info": order_info,
+                "answer": answer,
+                "question": "Chị có cần em hỗ trợ gì thêm không ạ?"
+            }
 
         elif intent == "2":
-            return "Dạ em cảm ơn chị nhiều ạ 💖 Em sẽ tiến hành lên đơn ngay cho mình nhé!"
+            return {
+                "order_info": order_info,
+                "answer": "Dạ em cảm ơn chị nhiều ạ 💖 Em sẽ tiến hành lên đơn ngay cho mình nhé!",
+                "question": "Chị có cần đổi gì thêm không ạ, ví dụ số bộ hay màu sắc?"
+            }
 
         else:
-            return "Chị chờ em chút ạ 🫶"
+            return {
+                "order_info": order_info,
+                "answer": "Chị chờ em chút ạ 🫶",
+                "question": "Không biết chị muốn cung cấp thêm thông tin hay xác nhận đặt hàng ạ?"
+            }
 
     # 🧠 Trường hợp thiếu thông tin → tiếp tục hỏi
-    base_prompt = f"""Bạn là một trợ lý bán hàng chuyên nghiệp. Trả lời dựa trên thông tin bên dưới, sau đó hỏi thêm thông tin tiếp theo.
+    base_prompt = f"""
+Bạn là một trợ lý bán hàng chuyên nghiệp. Hãy thực hiện 3 việc:
+1. Trả lời khách một cách thân thiện.
+2. Nếu thiếu thông tin, hãy hỏi tiếp khách về thông tin còn thiếu.
+3. Trả về kết quả dưới dạng JSON với 3 trường: order_info, answer, question.
 
-Thông tin đã biết: {known_info_str}
+Trả lời dựa trên thông tin đơn hàng ở dạng JSON dưới đây và câu hỏi của khách hàng.
+
+Thông tin đơn hàng:
+{json.dumps(info_status, ensure_ascii=False, indent=2)}
 Thông tin cần biết tiếp theo: {next_missing}
 
 Thông tin thêm:
 {context_block}
 
 Câu của khách: {question}
-Trả lời:"""
+Kết quả trả về (JSON):""".strip()
 
     response = openai.chat.completions.create(
         model="gpt-4.1-nano",
         messages=[{"role": "user", "content": base_prompt}],
-        max_tokens=1000,
+        max_tokens=500,
         temperature=0.1
     )
-    print("prompt:", base_prompt)
-    answer = response.choices[0].message.content.strip()
-    return answer
+
+    raw_output = response.choices[0].message.content.strip()
+    print("🔍 raw model output:", raw_output)
+
+    try:
+        result = json.loads(raw_output)
+    except Exception:
+        # fallback: try to parse manually if model doesn't return valid JSON
+        result = False
+
+    return result
 
 if __name__ == '__main__':
     rag = RAG()
