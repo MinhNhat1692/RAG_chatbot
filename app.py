@@ -161,7 +161,8 @@ def handle_chatwoot_message(query, convo_id):
                 "130=>6-7tuổi,23-26kg,126cm",
                 "140=>8-9tuổi,27-30kg,134cm",
                 "phải nói là bé nhà mình phù hợp với cỡ xx và xx ạ (chọn 2 cỡ phù hợp nhất gồm cỡ vừa nhất và cỡ lớn hơn 1 cỡ)"
-                "khi xác định thì phải hỏi 2 cỡ cho khách hàng chọn ví dụ 90 100 chị chọn cỡ nào ạ",
+                "sau khi khách hàng đã báo thông tin thì mới hỏi 2 cỡ phù hợp nhất cho khách hàng chọn ví dụ 90 100 chị chọn cỡ nào ạ",
+                "nếu khách đã báo thông tin chiều cao cân nặng rồi thì không hỏi chiều cao cân nặng độ tuổi nữa",
                 "câu hỏi thì để trong biến question_ask_next, ko để trong biến answer_only"
             ],
             "màu sắc": [
