@@ -191,7 +191,6 @@ def handle_chatwoot_message(query, convo_id):
             rag.store_and_link_query(convo_id, query, source='user')
             rag.store_and_link_query(convo_id, answer["answer_only"], source='bot')
             rag.store_and_link_query(convo_id, answer["question_ask_next"], source='bot')
-            send_message_to_chatwoot(account_id, convo_id, answer["order_info"], token)
             send_message_to_chatwoot(account_id, convo_id, answer["answer_only"], token)
             send_message_to_chatwoot(account_id, convo_id, answer["question_ask_next"], token)
 
