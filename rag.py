@@ -248,24 +248,31 @@ def answer_question(question, contexts, next_missing=None, info_status=None):
     if next_missing is None:
         # Gửi prompt để phân loại intent
         intent_prompt = f"""
-Bạn là một trợ lý bán hàng. Phân loại câu của khách vào 1 trong 3 nhóm sau (chỉ trả về đúng số):
-1. Khách đang cung cấp thêm thông tin đơn hàng (số điện thoại và địa chỉ)
-2. Khách xác nhận muốn đặt hàng
-3. Câu nói không liên quan hoặc chưa rõ ý định
+    Bạn là một trợ lý bán hàng. Phân loại câu của khách vào 1 trong 3 nhóm sau (chỉ trả về đúng số):
+    1. Khách đang cung cấp thêm thông tin đơn hàng (số điện thoại và địa chỉ)
+    2. Khách xác nhận muốn đặt hàng
+    3. Câu nói không liên quan hoặc chưa rõ ý định
 
-Câu của khách: "{question}"
+    Câu của khách: "{question}"
 
-Chỉ trả lời bằng 1, 2 hoặc 3.
-"""
+    Chỉ trả lời bằng 1, 2 hoặc 3.
+    """
+        print("🔍 [DEBUG] intent_prompt:\n", intent_prompt)
+
         intent_response = openai.chat.completions.create(
             model="gpt-4.1-nano",
             messages=[{"role": "user", "content": intent_prompt}],
             max_tokens=10,
             temperature=0
         )
+
         intent = intent_response.choices[0].message.content.strip()
+        print("🔍 [DEBUG] intent_response:", intent_response)
+        print("🔍 [DEBUG] intent:", intent)
 
         don_hang_list = info_status.get('đơn hàng', [])
+        print("📦 [DEBUG] Tổng số đơn hàng:", len(don_hang_list))
+        print("📦 [DEBUG] Danh sách đơn hàng:", don_hang_list)
 
         def get_first_valid_value(key):
             for dh in don_hang_list:
@@ -279,11 +286,15 @@ Chỉ trả lời bằng 1, 2 hoặc 3.
         for dh in don_hang_list:
             try:
                 so_bo = int(dh.get("số bộ", 0) or 0)
+                print(f"🔢 [DEBUG] số bộ đơn hàng: {so_bo}")
                 total_so_bo += so_bo
             except (ValueError, TypeError):
+                print("⚠️ [DEBUG] Không parse được số bộ:", dh.get("số bộ"))
                 continue
         if total_so_bo == 0:
             total_so_bo = 1  # mặc định 1 nếu không có số bộ hợp lệ
+
+        print("🔢 [DEBUG] Tổng số bộ:", total_so_bo)
 
         order_info = {
             "kích thước": get_first_valid_value("kích thước"),
@@ -293,8 +304,11 @@ Chỉ trả lời bằng 1, 2 hoặc 3.
             "địa chỉ giao hàng": info_status.get("địa chỉ giao hàng") or "chưa rõ",
         }
 
+        print("📦 [DEBUG] order_info:", order_info)
+
         # Tính tổng tiền theo số bộ
         tong_tien = total_so_bo * (170000 if total_so_bo > 1 else 175000)
+        print("💰 [DEBUG] Tổng tiền:", tong_tien)
 
         if intent == "1":
             answer = (
@@ -303,6 +317,7 @@ Chỉ trả lời bằng 1, 2 hoặc 3.
                 f"\n👉 Tổng tiền: {tong_tien:,} VNĐ\n\n"
                 f"Dạ em gửi khoảng 3-4 ngày chị nhận được, chị nhận thanh toán giúp em {tong_tien:,} VNĐ và phí ship ạ"
             )
+            print("✅ [DEBUG] Trường hợp intent 1 - cung cấp thêm thông tin")
             return {
                 "order_info": order_info,
                 "answer": answer,
@@ -310,6 +325,7 @@ Chỉ trả lời bằng 1, 2 hoặc 3.
             }
 
         elif intent == "2":
+            print("✅ [DEBUG] Trường hợp intent 2 - xác nhận đặt hàng")
             return {
                 "order_info": order_info,
                 "answer": "Dạ em cảm ơn chị nhiều ạ 💖 Em sẽ tiến hành lên đơn ngay cho mình nhé!",
@@ -317,6 +333,7 @@ Chỉ trả lời bằng 1, 2 hoặc 3.
             }
 
         else:
+            print("❓ [DEBUG] Trường hợp intent 3 - chưa rõ ý định")
             return {
                 "order_info": order_info,
                 "answer": "Chị chờ em chút ạ 🫶",

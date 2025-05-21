@@ -166,8 +166,7 @@ def handle_chatwoot_message(query, convo_id):
                 "câu hỏi thì để trong biến question_ask_next, ko để trong biến answer_only"
             ],
             "màu sắc": [
-                "Sản phẩm có các màu: Trắng, Hồng, Xanh cốm.",
-                "khách chọn màu gần đúng thì confirm lại. ví dụ chọn xanh thì hỏi lại là có phải chọn xanh cốm không"
+                "Sản phẩm có các màu: Trắng, Hồng, Xanh cốm."
             ],
             "số bộ": [],
             "số điện thoại": [
