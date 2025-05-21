@@ -136,7 +136,8 @@ def handle_chatwoot_message(query, convo_id):
                 "140=>8-9tuổi,27-30kg,134cm",
             ],
             "màu sắc": [
-                "Sản phẩm có các màu: Trắng, Hồng, Xanh cốm."
+                "Sản phẩm có các màu: Trắng, Hồng, Xanh cốm.",
+                "khách chọn màu gần đúng thì confirm lại. ví dụ chọn xanh thì hỏi lại là có phải chọn xanh cốm không"
             ],
             "số bộ": [],
             "số điện thoại": [

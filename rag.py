@@ -129,8 +129,21 @@ Lịch sử hội thoại:
     try:
         return json.loads(result)
     except json.JSONDecodeError:
-        print("❌ Lỗi parse JSON từ GPT:", result)
-        return {}
+        print("⚠️ Lỗi parse JSON lần đầu:", result)
+
+        # Try to fix with a follow-up message
+        fix_prompt = f"""
+Kết quả sau không phải là JSON hợp lệ. Hãy sửa lại cú pháp JSON và trả về JSON đúng chuẩn: {result} """
+        messages.append({"role": "assistant", "content": result})
+        messages.append({"role": "user", "content": fix_prompt})
+
+        fixed_result = call_gpt(messages)
+
+        try:
+            return json.loads(fixed_result)
+        except json.JSONDecodeError:
+            print("❌ Lỗi parse JSON lần thứ hai:", fixed_result)
+            return {}
 
 
 # ------------------- RAG Class -------------------
