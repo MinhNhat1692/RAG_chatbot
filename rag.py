@@ -140,12 +140,12 @@ class RAG:
         self.texts = []
 
         # Load from DB
-        entries = load_all_embeddings()
-        if entries:
-            vecs = [e[2] for e in entries]
-            self.index.add(np.array(vecs))
-            self.texts = [e[1] for e in entries]
-            print(f"[Loaded] {len(self.texts)} entries from DB.")
+        #entries = load_all_embeddings()
+        #if entries:
+        #    vecs = [e[2] for e in entries]
+        #    self.index.add(np.array(vecs))
+        #    self.texts = [e[1] for e in entries]
+        #    print(f"[Loaded] {len(self.texts)} entries from DB.")
 
     def add(self, text):
         if text in self.texts:
